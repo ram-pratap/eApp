@@ -1,3 +1,6 @@
+<<<<<<< HEAD
 #set ($css_class = "${css_class} dockbar-split")
+=======
+>>>>>>> d0c28f9f270b5ad291c3c7d9df648bb965685d07
 
 #set($company_name = "RK HRM")

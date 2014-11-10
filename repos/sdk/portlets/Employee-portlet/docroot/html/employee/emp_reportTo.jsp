@@ -73,13 +73,13 @@ A.all('input[type=text]').set('disabled',true);
     AUI().use('autocomplete-list','aui-base','aui-io-request-deprecated',
     'autocomplete-filters','autocomplete-highlighters',function (A) {
 	var testData;
-	new A.AutoCompleteList({
+	var node1=new A.AutoCompleteList({
 		allowBrowserAutocomplete: 'true',
 		activateFirstItem: 'true',
-		inputNode: '#<portlet:namespace />report_sup_name',
+		inputNode: '#<portlet:namespace/>report_sup_name',
 		render: 'true',
 		resultHighlighter: 'phraseMatch',
-		resultTextLocator:'name',
+		resultTextLocator:'firstName',
 		resultFilters:['phraseMatch'],
 		source:function(){
 		var inputValue=A.one("#<portlet:namespace />report_sup_name").get('value');
@@ -100,6 +100,16 @@ A.all('input[type=text]').set('disabled',true);
 		myAjaxRequest.start();
 		return testData;},
 		});
+		node1.on('select',function(e)
+		{
+		alert(testData);
+		alert(A.one("#<portlet:namespace />report_sup_name").get('value'));
+		var selected_node = e.itemNode,
+        selected_data = e.result;
+        alert(selected_data);
+        alert(selected_data.raw.firstName);
+        A.one("#<portlet:namespace />supervisorId").set("value",selected_data.raw.id);
+		});
 	});
 </aui:script>
 <%
@@ -107,6 +117,7 @@ A.all('input[type=text]').set('disabled',true);
 			"empId");
 	long employeeId = (Long)empId.get("empId");
 	String jsp=(String)empId.get("jsp");
+	long fileEntryId=(Long)empId.get("fileId");
 	DynamicQuery supervisorDynamicQuery = DynamicQueryFactoryUtil
 			.forClass(EmpSupervisor.class,
 					PortletClassLoaderUtil.getClassLoader());
@@ -120,29 +131,54 @@ A.all('input[type=text]').set('disabled',true);
 	supervisorDynamicQuery.add(PropertyFactoryUtil.forName("employeeId")
 			.eq(employeeId));
 	List<EmpSubordinate> empSubordinateDetails = EmpSubordinateLocalServiceUtil
-			.dynamicQuery(supervisorDynamicQuery);
+			.dynamicQuery(subordinateDynamicQuery);
 %>
+<%!public String supervisorValue(long supId)
+	{
+		if (supId != 0) {
+			DynamicQuery empPerDynamicQuery = DynamicQueryFactoryUtil.forClass(
+					EmpPersonalDetails.class,
+					PortletClassLoaderUtil.getClassLoader());
+			empPerDynamicQuery.add(PropertyFactoryUtil.forName("employeeId")
+					.eq(supId));
+			List<EmpPersonalDetails> empPersDetails = null;
+			try {
+				empPersDetails = EmpPersonalDetailsLocalServiceUtil
+						.dynamicQuery(empPerDynamicQuery);
+			} catch (Exception e) {
+
+			}
+			EmpPersonalDetails empDetailss = empPersDetails.get(0);
+			return empDetailss.getFirstName();
+		}
+		else
+		{
+			return "";
+		}
+	}%>
 <div id="assignedSupervisorAdd" class="panel">
 	<div class="panel-heading">
-		<h3>Add Supervisor</h3>
+		<h3><liferay-ui:message key="01_add-supervisor" /></h3>
 	</div>
 	<div class="panel-body">
 		<aui:form name="addSupervisor" id="addSupervisor"
 			action="<%=addSupervisorEmp %>" method="post">
 			<aui:input name="empSupId" value="<%=employeeId %>"
 			type="hidden"></aui:input>
+			<aui:input name="reportFileId" value="<%=fileEntryId %>"
+			type="hidden"></aui:input>
+			<aui:input name="supervisorId" id="supervisorId"
+			type="hidden"></aui:input>
 			<div class="row-fluid">
 				<div class="span8">
 					<aui:input name="report_sup_name" id="report_sup_name" 
-					label="Name" inlineLabel="left"
-						showRequiredLabel="false">
-						<aui:validator name="required"></aui:validator>
+					label="Name" inlineLabel="left" >
 					</aui:input>
 				</div>
 			</div>
 			<div class="row-fluid">
 				<div class="span8">
-					<aui:select name="reporting_sup_method" label="Reporting Method"
+					<aui:select name="reporting_sup_method" label="01_reporting-method"
 						inlineLabel="left" showRequiredLabel="false">
 						<aui:option name="direct">Direct</aui:option>
 						<aui:option name="direct">Indirect</aui:option>
@@ -159,16 +195,18 @@ A.all('input[type=text]').set('disabled',true);
 </div>
 <div id="assignedSubordinateAdd" class="panel">
 	<div class="panel-heading">
-		<h3>Add Subordinate</h3>
+		<h3><liferay-ui:message key="01_add-subordinate" /></h3>
 	</div>
 	<div class="panel-body">
 		<aui:form name="addSubordinate" id="addSubordinate"
 			action="<%=addSubordinateEmp %>" method="post">
 			<aui:input name="empSubId" value="<%=employeeId %>"
 			type="hidden"></aui:input>
+			<aui:input name="reportFileId" value="<%=fileEntryId %>"
+			type="hidden"></aui:input>
 			<div class="row-fluid">
 				<div class="span8">
-					<aui:input name="report_sub_name" label="Name" inlineLabel="left"
+					<aui:input name="report_sub_name" label="01_name" inlineLabel="left"
 						showRequiredLabel="false">
 						<aui:validator name="required"></aui:validator>
 					</aui:input>
@@ -176,7 +214,7 @@ A.all('input[type=text]').set('disabled',true);
 			</div>
 			<div class="row-fluid">
 				<div class="span8">
-					<aui:select name="reporting_sub_method" label="Reporting Method"
+					<aui:select name="reporting_sub_method" label="01_reporting-method"
 						inlineLabel="left" showRequiredLabel="false">
 						<aui:option name="direct">Direct</aui:option>
 						<aui:option name="direct">Indirect</aui:option>
@@ -193,7 +231,7 @@ A.all('input[type=text]').set('disabled',true);
 </div>
 <div id="supervisorAddDelete" class="panel">
 	<div class="panel-heading">
-		<h3>Assigned Supervisors</h3>
+		<h3><liferay-ui:message key="01_assigned-supervisors" /></h3>
 	</div>
 	<div class="panel-body">
 		<aui:button id="supervisorAdd" name="supervisorAdd" value="Add" 
@@ -214,8 +252,9 @@ A.all('input[type=text]').set('disabled',true);
 			</liferay-ui:search-container-results>
 			<liferay-ui:search-container-row className="EmpSupervisor"
 				modelVar="id">
-				<liferay-ui:search-container-column-text name="Assigned Supervisor" />
-				<liferay-ui:search-container-column-text name="Reporting Method"
+				<liferay-ui:search-container-column-text name="01_assigned-supervisor"
+				value="<%=supervisorValue(id.getReporterEmployeeId()) %>" />
+				<liferay-ui:search-container-column-text name="01_reporting-method"
 					property="reportingMethod" />
 			</liferay-ui:search-container-row>
 			<liferay-ui:search-iterator />
@@ -224,7 +263,7 @@ A.all('input[type=text]').set('disabled',true);
 </div>
 <div id="subordinateAddDelete" class="panel">
 	<div class="panel-heading">
-		<h3>Assigned Subordinates</h3>
+		<h3><liferay-ui:message key="01_assigned-subordinates" /></h3>
 	</div>
 	<div class="panel-body">
 		<aui:button id="subordinateAdd" name="subordinateAdd" value="Add" 
@@ -243,10 +282,10 @@ A.all('input[type=text]').set('disabled',true);
 							pageContext.setAttribute("total", total);
 				%>
 			</liferay-ui:search-container-results>
-			<liferay-ui:search-container-row className="EmpDependent"
+			<liferay-ui:search-container-row className="EmpSubordinate"
 				modelVar="id">
-				<liferay-ui:search-container-column-text name="Assigned Subordinate"  />
-				<liferay-ui:search-container-column-text name="Reporting Method"
+				<liferay-ui:search-container-column-text name="01_assigned-subordinate"  />
+				<liferay-ui:search-container-column-text name="01_reporting-method"
 					property="reportingMethod" />
 			</liferay-ui:search-container-row>
 			<liferay-ui:search-iterator />
